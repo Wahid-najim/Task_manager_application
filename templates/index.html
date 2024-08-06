@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        header h1 {
+            margin: 0;
+        }
+        
+        #task-container {
+            padding: 20px;
+        }
+        
+        #task-form {
+            margin-bottom: 20px;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        #task-form.hidden {
+            display: none;
+        }
+        
+        input, textarea, select, button {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        #task-list {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .task-item {
+            background-color: #fff;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: background-color 0.3s ease;
+        }
+        
+        .task-item:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Task Manager</h1>
+        <div id="user-info">
+            {% if username %}
+                <span id="username">Welcome, {{ username }}</span>
+                <a href="{{ url_for('logout') }}"><button id="logout">Logout</button></a>
+            {% else %}
+                <a href="{{ url_for('login') }}"><button id="login">Login</button></a>
+            {% endif %}
+        </div>
+    </header>
+    <main>
+        <div id="task-container">
+            <button id="add-task-btn">Add Task</button>
+            <div id="task-form" class="hidden">
+                <input type="text" id="task-title" placeholder="Task Title">
+                <textarea id="task-description" placeholder="Task Description"></textarea>
+                <select id="task-category">
+                    <option value="Personal">Personal</option>
+                    <option value="Work">Work</option>
+                    <option value="Other">Other</option>
+                </select>
+                <button id="save-task-btn">Save Task</button>
+                <button id="cancel-task-btn">Cancel</button>
+            </div>
+            <div id="task-list"></div>
+        </div>
+    </main>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const addTaskBtn = document.getElementById('add-task-btn');
+            const taskForm = document.getElementById('task-form');
+            const saveTaskBtn = document.getElementById('save-task-btn');
+            const cancelTaskBtn = document.getElementById('cancel-task-btn');
+            const taskTitle = document.getElementById('task-title');
+            const taskDescription = document.getElementById('task-description');
+            const taskCategory = document.getElementById('task-category');
+            const taskList = document.getElementById('task-list');
+        
+            addTaskBtn.addEventListener('click', () => {
+                taskForm.classList.toggle('hidden');
+            });
+        
+            cancelTaskBtn.addEventListener('click', () => {
+                taskForm.classList.add('hidden');
+                clearForm();
+            });
+        
+            saveTaskBtn.addEventListener('click', () => {
+                const title = taskTitle.value;
+                const description = taskDescription.value;
+                const category = taskCategory.value;
+        
+                if (title && description && category) {
+                    fetch('/tasks', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ title, description, category })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.message === 'Task added') {
+                            addTaskToList({ title, description, category });
+                            taskForm.classList.add('hidden');
+                            clearForm();
+                        }
+                    });
+                }
+            });
+        
+            function clearForm() {
+                taskTitle.value = '';
+                taskDescription.value = '';
+                taskCategory.value = 'Personal';
+            }
+        
+            function addTaskToList(task) {
+                const taskItem = document.createElement('div');
+                taskItem.className = 'task-item';
+                taskItem.innerHTML = `
+                    <h3>${task.title}</h3>
+                    <p>${task.description}</p>
+                    <small>${task.category}</small>
+                    <button class="delete-task-btn">Delete</button>
+                `;
+        
+                const deleteBtn = taskItem.querySelector('.delete-task-btn');
+                deleteBtn.addEventListener('click', () => {
+                    taskItem.remove();
+                });
+        
+                taskList.appendChild(taskItem);
+            }
+        
+            // Load tasks on page load
+            fetch('/tasks')
+            .then(response => response.json())
+            .then(tasks => {
+                tasks.forEach(task => addTaskToList(task));
+            });
+        });
+    </script>
+</body>
+</html>
